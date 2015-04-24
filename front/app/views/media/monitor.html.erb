@@ -1,0 +1,54 @@
+
+<%= javascript_include_tag "highcharts.js" %>
+<%= javascript_include_tag "monitor.js" %>
+
+<div class="wrapper">
+  <h1>DMS Monitor</h1>
+
+  <div class="container">
+
+  <div class="tables">
+    <h2>Node Storage Information</h2>
+      <table>
+        <!-- IMPORTANT, class="list" have to be at tbody -->
+        <tbody class="list">
+        <% @nodes.each do |node| %>
+            <tr>
+              <td class="name"><%= node.ip %></td>
+              <td class="born">
+                <% list = node.files.split("#") %>
+                <% list.each do |item| %>
+                    <p><%= item %></p>
+                <% end %>
+
+              </td>
+            </tr>
+        <% end %>
+        </tbody>
+      </table>
+
+    <h2>File Distribution</h2>
+      <table>
+        <!-- IMPORTANT, class="list" have to be at tbody -->
+        <tbody class="list">
+        <% @files.each do |file| %>
+            <tr>
+              <td class="name"><%= file.name %></td>
+              <td class="born">
+                <% list = file.nodes.split("#") %>
+                <% list.each do |item| %>
+                    <p><%= item %></p>
+                <% end %>
+              </td>
+            </tr>
+        <% end %>
+        </tbody>
+      </table>
+
+    </div>
+
+  <div class="graph" style="width:500px; height:350px;"></div>
+</div>
+
+
+</div>
