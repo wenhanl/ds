@@ -12,4 +12,27 @@
  *
  *= require_tree .
  *= require_self
+ *= require jquery.ui.all
+ *= require jquery.fileupload-ui
  */
+
+#beauty-progress {
+    background: url(progressbar.gif);
+}
+
+.nav-pills a {
+    color: gray;
+    font-size: 18px;
+}
+
+.nav-pills {
+    float: left;
+    margin: 15px 20px;
+}
+
+h1.logo {
+    color: #F5AE16;
+    font-family: Helvetica, sans-serif;
+    float: left;
+    font-size: 36px;
+}

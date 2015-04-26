@@ -12,5 +12,22 @@
 //
 //= require jquery
 //= require jquery_ujs
+//= require jquery-ui
+//= require twitter/bootstrap
 //= require turbolinks
+//= require jquery-fileupload/basic
 //= require_tree .
+
+
+
+
+$(function () {
+    $("#dialog").dialog({
+        autoOpen: false,
+        width: 500
+    });
+    $("#upload").click(function(){
+        $("#dialog").dialog('open');
+    });
+
+});

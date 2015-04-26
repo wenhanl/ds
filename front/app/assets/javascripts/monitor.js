@@ -2,8 +2,7 @@
  * Created by wenhanl on 15-4-23.
  */
 
-var n2f = gon.node2file;
-var f2n = gon.file2node;
+
 var nodeSize = gon.nodesize;
 
 

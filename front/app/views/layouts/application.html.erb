@@ -2,14 +2,96 @@
 <html>
 <head>
   <title>Test</title>
+  <%= include_gon %>
   <%= stylesheet_link_tag    'application', media: 'all', 'data-turbolinks-track' => true %>
   <%= javascript_include_tag 'application', 'data-turbolinks-track' => true %>
-  <%= include_gon %>
+
   <%= csrf_meta_tags %>
+
+  <link rel="stylesheet" href="//blueimp.github.io/Gallery/css/blueimp-gallery.min.css">
 </head>
 <body>
 
+<div class="wrapper">
+  <h1 class="logo">Distributed Media Storage</h1>
+    <ul class="nav nav-pills">
+      <li role="presentation" class="active"><a href="/media/monitor">Monitor</a></li>
+      <li role="presentation"><a href="/media/view">Gallery</a></li>
+      <li role="presentation" id="upload"><a href="#">Upload</a></li>
+    </ul>
 <%= yield %>
+
+</div>
+
+<script>
+    /*jslint unparam: true */
+    /*global window, $ */
+    $(function () {
+        'use strict';
+        var url = '//localhost/server/php/';
+        $('#fileupload').click(function() {
+            $('#progress .progress-bar').css(
+                    'width',
+                            0 + '%'
+            );
+
+            $.ajax({
+                url: "/uploader/upload",
+                dataType: "html",
+                async: false,
+                success: function(msg) {
+                    url = "//" + msg
+
+                    $('#fileupload').fileupload({
+                        url: url,
+                        dataType: 'json',
+                        done: function (e, data) {
+                            $.each(data.result.files, function (index, file) {
+                                $('<p/>').text(file.name).appendTo('#files');
+                                $('<p/>').text("Success! Uploaded to " + url).appendTo('#files');
+                            });
+
+
+                        },
+                        progressall: function (e, data) {
+                            var progress = parseInt(data.loaded / data.total * 100, 10);
+                            $('#progress .progress-bar').css(
+                                    'width',
+                                            progress + '%'
+                            );
+                        }
+                    });
+                },
+                error: function(result) {
+                    $('<p/>').text(result).appendTo('#files');
+                }
+            });
+        });
+        // Change this to the location of your server-side upload handler:
+
+
+
+    });
+</script>
+<div id="dialog" title="Upload files" >
+  <span class="btn btn-success fileinput-button">
+        <i class="glyphicon glyphicon-plus"></i>
+        <span>Select files...</span>
+        <!-- The file input field used as target for the file upload widget -->
+        <input id="fileupload" type="file" name="files[]" multiple>
+    </span>
+  <br>
+  <br>
+  <!-- The global progress bar -->
+  <div id="progress" class="progress">
+    <div class="progress-bar progress-bar-success" id="beauty-progress"></div>
+  </div>
+  <!-- The container for the uploaded files -->
+  <div id="files" class="files"></div>
+
+
+
+</div>
 
 </body>
 </html>
