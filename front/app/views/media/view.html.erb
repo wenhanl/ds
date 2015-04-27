@@ -1,3 +1,26 @@
 
-<div class="image-container"></div>
+
+<div class="image-container">
+
+  <ul class="list">
+    <!--<li><img src="http://localhost/server/php/files/786_1074813_161093.jpg" alt="" width="100%"/></li>-->
+    <!--<li><img src="http://localhost/server/php/files/786_1074815_107428.jpg" alt="" width="100%"/></li>-->
+    <!--<li><img src="http://localhost/server/php/files/786_1074820_429048.jpg" alt="" width="100%"/></li>-->
+    <!--<li><img src="http://localhost/server/php/files/786_1074824_478234.jpg" alt="" width="100%"/></li>-->
+    <!--<li><img src="http://localhost/server/php/files/786_1074826_144788.jpg" alt="" width="100%"/></li>-->
+    <!--<li><img src="http://localhost/server/php/files/786_1074827_191547.jpg" alt="" width="100%"/></li>-->
+    <!--<li><img src="http://localhost/server/php/files/DSC_0147%20copy.JPG" alt="" width="100%"/></li>-->
+
+    <% @files.each do |item| %>
+        <% urls = item.nodes %>
+        <li><img src="http://localhost/server/php/files/<%=item.name %>" alt="" width="100%"/></li>
+    <% end %>
+  </ul>
+
+  <%= videojs_rails sources: { mp4: "http://localhost/server/php/files/Last.mp4"}, setup: "{}", controls: false, width:"400", height:"300",poster:"http://video-js.zencoder.com/oceans-clip.png"%>
+
+</div>
+
+
+
 

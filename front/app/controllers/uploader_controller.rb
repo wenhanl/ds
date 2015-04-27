@@ -12,7 +12,7 @@ class UploaderController < ApplicationController
     end
 
     # debug line
-    min_ip = 'localhost/server/php/'
+    # min_ip = 'localhost/server/php/'
 
     render html:min_ip
   end

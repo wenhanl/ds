@@ -8,6 +8,7 @@ var nodeSize = gon.nodesize;
 
 
 $(function () {
+
     keylist = new Array();
     valuelist = new Array();
     for (key in nodeSize) {

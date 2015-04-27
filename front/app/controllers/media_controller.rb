@@ -23,6 +23,8 @@ class MediaController < ApplicationController
   end
 
   def view
+    gon.nodesize = "haha"
 
+    @files = Files.all
   end
 end
