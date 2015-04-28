@@ -1,5 +1,3 @@
-
-
 <div class="image-container">
 
   <ul class="list">
@@ -11,13 +9,28 @@
     <!--<li><img src="http://localhost/server/php/files/786_1074827_191547.jpg" alt="" width="100%"/></li>-->
     <!--<li><img src="http://localhost/server/php/files/DSC_0147%20copy.JPG" alt="" width="100%"/></li>-->
 
-    <% @files.each do |item| %>
-        <% urls = item.nodes %>
-        <li><img src="http://localhost/server/php/files/<%=item.name %>" alt="" width="100%"/></li>
-    <% end %>
+
   </ul>
 
-  <%= videojs_rails sources: { mp4: "http://localhost/server/php/files/Last.mp4"}, setup: "{}", controls: false, width:"400", height:"300",poster:"http://video-js.zencoder.com/oceans-clip.png"%>
+  <ul class="list">
+    <% @files.each do |file| %>
+        <% urls = file.nodes.split("#") %>
+        <% randIndex = Random.rand(urls.size()) %>
+        <% currentFrom = urls[randIndex] %>
+        <% filename = file.name %>
+        <li>
+          <% if !filename.downcase.end_with? "mp4" %>
+              <img src="http://<%= currentFrom %>/files/<%= filename %>" alt="" width="100%"/>
+              <%= urls[randIndex] %>
+          <% else %>
+              <%= videojs_rails sources: { mp4: "http://" + currentFrom + "/files/" + filename}, setup: "{}", poster: "/video_poster.jpg", controls: false, width:"100%", height:"220" %>
+              <%= urls[randIndex] %>
+          <% end %>
+        </li>
+
+
+    <% end %>
+  </ul>
 
 </div>
 

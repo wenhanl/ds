@@ -12,6 +12,7 @@ class UploaderController < ApplicationController
     end
 
     # debug line
+    # min_ip = 'ec2-52-6-175-32.compute-1.amazonaws.com/'
     # min_ip = 'localhost/server/php/'
 
     render html:min_ip

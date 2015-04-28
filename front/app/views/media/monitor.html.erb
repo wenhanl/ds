@@ -26,17 +26,17 @@
       <table>
         <!-- IMPORTANT, class="list" have to be at tbody -->
         <tbody class="list">
-        <% @files.each do |file| %>
-            <tr>
-              <td class="name"><%= file.name %></td>
-              <td class="born">
-                <% list = file.nodes.split("#") %>
-                <% list.each do |item| %>
-                    <p><%= item %></p>
-                <% end %>
-              </td>
-            </tr>
-        <% end %>
+            <% @files.each do |file| %>
+                <tr>
+                  <td class="name"><%= file.name %></td>
+                  <td class="born">
+                    <% list = file.nodes.split("#") %>
+                    <% list.each do |item| %>
+                        <p><%= item %></p>
+                    <% end %>
+                  </td>
+                </tr>
+            <% end %>
         </tbody>
       </table>
 
