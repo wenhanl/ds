@@ -69,7 +69,14 @@ $(function () {
                         $.each(data.result.files, function (index, file) {
                             $('<p/>').text(file.name).appendTo('#files');
                             $('<p/>').text("Success! Uploaded to " + url).appendTo('#files');
+                            $.ajax({
+                                url: "http://"+url+":8080",
+                                data: {name:file.name},
+                                dataType: "html"
+                            });
                         });
+
+
 
 
                     },
