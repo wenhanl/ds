@@ -8,71 +8,22 @@
 
   <%= csrf_meta_tags %>
 
-  <link rel="stylesheet" href="//blueimp.github.io/Gallery/css/blueimp-gallery.min.css">
+
 </head>
 <body>
 
 <div class="wrapper">
-  <h1 class="logo">Distributed Media Storage</h1>
-    <ul class="nav nav-pills">
-      <li role="presentation" class="active"><a href="/media/monitor">Monitor</a></li>
-      <li role="presentation"><a href="/media/view">Gallery</a></li>
-      <li role="presentation" id="upload"><a href="#">Upload</a></li>
-    </ul>
+  <!--<h1 class="logo">Distributed Media Storage</h1>-->
+  <div class="logo"><%=image_tag("cutmypic.png", alt: "Distributed Media Storage", width: 240, height: 160)%></div>
+  <ul class="nav nav-pills">
+    <li role="presentation" id="monitor" class="active"><a href="/media/monitor">Monitor</a></li>
+    <li role="presentation" id="gallery"><a href="/media/view">Gallery</a></li>
+    <li role="presentation" id="upload"><a href="#">Upload</a></li>
+  </ul>
 <%= yield %>
 
 </div>
 
-<script>
-    /*jslint unparam: true */
-    /*global window, $ */
-    $(function () {
-        'use strict';
-        var url = '//localhost/server/php/';
-        $('#fileupload').click(function() {
-            $('#progress .progress-bar').css(
-                    'width',
-                            0 + '%'
-            );
-
-            $.ajax({
-                url: "/uploader/upload",
-                dataType: "html",
-                async: false,
-                success: function(msg) {
-                    url = "//" + msg
-
-                    $('#fileupload').fileupload({
-                        url: url,
-                        dataType: 'json',
-                        done: function (e, data) {
-                            $.each(data.result.files, function (index, file) {
-                                $('<p/>').text(file.name).appendTo('#files');
-                                $('<p/>').text("Success! Uploaded to " + url).appendTo('#files');
-                            });
-
-
-                        },
-                        progressall: function (e, data) {
-                            var progress = parseInt(data.loaded / data.total * 100, 10);
-                            $('#progress .progress-bar').css(
-                                    'width',
-                                            progress + '%'
-                            );
-                        }
-                    });
-                },
-                error: function(result) {
-                    $('<p/>').text(result).appendTo('#files');
-                }
-            });
-        });
-        // Change this to the location of your server-side upload handler:
-
-
-
-    });
-</script>
 <div id="dialog" title="Upload files" >
   <span class="btn btn-success fileinput-button">
         <i class="glyphicon glyphicon-plus"></i>

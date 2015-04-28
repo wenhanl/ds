@@ -7,14 +7,19 @@
   float: left;
 }
 
-.container h2 {
-  color: #7CAAE6;
-  font-family: arial, sans-serif;
-  font-size: 26px;
+#beauty-progress {
+  background: url(progressbar.gif);
 }
 
-body {
-  background-image: url(bright-squares.png);
+.list { width:1000px; margin:0 auto; list-style:none; padding: 0; background-color: transparent}
+.list li { display:inline; margin:0 10px 20px 0; padding:6px; border:1px #DDD solid; width: 32%; background-color: #fff}
+
+
+
+.container h2 {
+  color: #0066FF;
+  font-family: arial, sans-serif;
+  font-size: 26px;
 }
 
 .wrapper {
@@ -48,7 +53,7 @@ td {
   padding:6px;
   border:solid 1px #ddd;
   margin: 0;
-  color: #666666;
+  color: #666;
 }
 
 td.name {
