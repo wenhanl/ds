@@ -123,10 +123,21 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 	for {
 		buf := make([]byte, 1024)
 		bytesRead,_ := c.conn.Read(buf)
-		var m Message
-		json.Unmarshal(buf[:bytesRead], &m)
 		if (bytesRead > 0){
-			ch <- m
+			start := 0
+			for i := range buf {
+				if (buf[i] == 0){
+					msgbuf = buf[start, i]
+					length := i - start
+					if (length > 0){
+						var m Message
+						json.Unmarshal(msgbuf[:length], &m)
+						ch <- m
+					}
+				}
+				start = i + 1
+			}
+			
 		}
 	}
 }
@@ -301,10 +312,12 @@ func parseMessage(msg Message){
 				log.Printf("send copy to " + replica_node)
 				m := Message{localname, msg.Src, "ACKCP", files[0] + "," + replica_node}
 				data,_ := json.Marshal(m)
+				data = append(data, 0)
 				connections[msg.Src].conn.Write(data)
 			} else {
 				reply := Message{localname, msg.Src, "ACK", files[0]}
 				reply_data,_ := json.Marshal(reply)
+				reply_data = append(reply_data, 0)
 				connections[msg.Src].conn.Write(reply_data)
 			}
 		}
@@ -317,6 +330,7 @@ func parseMessage(msg Message){
 			log.Printf("send remove response")
 			m := Message{localname, lb_replica, "RM", node}
 			data,_ := json.Marshal(m)
+			data = append(data, 0)
 			connections[lb_replica].conn.Write(data)		
 			delete(heartbeats, node)
 			//io.WriteString(lb_replica, fmt.Sprintf("%s,RM:%s", localname, node))
@@ -355,6 +369,7 @@ func MoveData(client string){
 					replica_node := sqlite.DecideUploadReplica(n)
 					m := Message{localname, n, "CP", f + "," + replica_node}
 					data,_ := json.Marshal(m)
+					data = append(data, 0)
 					connections[n].conn.Write(data)
 				}
 			}
@@ -379,6 +394,7 @@ func healthcheck(client string, msgchan chan<- Message, addchan chan<- Client, r
 			cl = connections[lb_replica]	
 		}else {
 			data,_ := json.Marshal(m)
+			data = append(data, 0)
 			cl.conn.Write(data)
 			delete(heartbeats, client)
 		}
@@ -393,6 +409,7 @@ func checkACK(fileName string, m Message, msg Message){
 			 break
 		} else {
 			data,_ := json.Marshal(m)
+			data = append(data, 0)
 			connections[lb_replica].conn.Write(data)
 			count++
 		}
@@ -406,10 +423,12 @@ func checkACK(fileName string, m Message, msg Message){
 				log.Printf("send copy to " + replica_node)
 				m := Message{localname, msg.Src, "ACKCP", contents[0] + "," + replica_node}
 				data,_ := json.Marshal(m)
+				data = append(data, 0)
 				connections[msg.Src].conn.Write(data)
 			} else {
 				reply := Message{localname, msg.Src, "ACK", contents[0]}
 				reply_data,_ := json.Marshal(reply)
+				reply_data = append(reply_data, 0)
 				connections[msg.Src].conn.Write(reply_data)
 			}
 			time.Sleep(500 * time.Millisecond)
@@ -420,6 +439,7 @@ func checkACK(fileName string, m Message, msg Message){
 					client_conn := connections[i].conn
 					m := Message{localname, i, "DOWN", lb_replica}
 					data,_ := json.Marshal(m)
+					data = append(data, 0)
 					client_conn.Write(data)
 				}
 				status = true

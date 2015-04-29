@@ -122,10 +122,21 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 	for {
 		buf := make([]byte, 1024)
 		bytesRead,_ := c.conn.Read(buf)
-		var m Message
-		json.Unmarshal(buf[:bytesRead], &m)
 		if (bytesRead > 0){
-			ch <- m
+			start := 0
+			for i := range buf {
+				if (buf[i] == 0){
+					msgbuf = buf[start, i]
+					length := i - start
+					if (length > 0){
+						var m Message
+						json.Unmarshal(msgbuf[:length], &m)
+						ch <- m
+					}
+				}
+				start = i + 1
+			}
+			
 		}
 	}
 }
@@ -208,7 +219,7 @@ func initiateConnection(m Message, msgchan chan<- Message, addchan chan<- Client
 			nickname: lb_replica,
 			ch:       make(chan string),
 		}
-
+		msgdata = append(msgdata, 0)
 		c.Write(msgdata)
 		//io.WriteString(lb_replica, fmt.Sprintf("%s,%s", localname, text))
 			
@@ -250,6 +261,7 @@ func parseMessage(msg Message){
 				log.Printf("receieve heartbeat again, keep the node")
 				m := Message{localname, lb_replica, "KEEP", src}
 				data,_ := json.Marshal(m)
+				data = append(data, 0)
 				connections[lb_replica].conn.Write(data)
 			}
 			heartbeats[src] = node + 1
@@ -268,6 +280,7 @@ func parseMessage(msg Message){
 		}
 		reply := Message{localname, src, "ACK", files[0]}
 		reply_data,_ := json.Marshal(reply)
+		reply_data = append(reply_data, 0)
 		connections[src].conn.Write(reply_data)
 
 		sqlite.UpdateNodes(files[0], cfg.Profile[src].Addr, size)
@@ -301,6 +314,7 @@ func parseMessage(msg Message){
 		log.Printf("send copy to " + replica_node)
 		m := Message{localname, src, "ACKCP", files[0] + "," + replica_node}
 		data,_ := json.Marshal(m)
+		data = append(data, 0)
 		connections[src].conn.Write(data)
 
 		Replicate()
@@ -345,6 +359,7 @@ func MoveData(client string){
 					}
 					m := Message{localname, copy_node, "CP", f + "," + replica_addr}
 					data,_ := json.Marshal(m)
+					data = append(data, 0)
 					fmt.Println(len(cfg.Profile))
 					connections[copy_node].conn.Write(data)
 				}
@@ -369,6 +384,7 @@ func healthcheck(client string, msgchan chan<- Message, addchan chan<- Client, r
 		cl = connections[lb_replica]
 	} else {*/
 	data,_ := json.Marshal(m)
+	data = append(data, 0)
 	cl.conn.Write(data)	
 	
 	log.Printf("request to remove")

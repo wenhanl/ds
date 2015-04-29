@@ -107,10 +107,21 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 	for {
 		buf := make([]byte, 1024)
 		bytesRead,_ := c.conn.Read(buf)
-		var m Message
-		json.Unmarshal(buf[:bytesRead], &m)
 		if (bytesRead > 0){
-			ch <- m
+			start := 0
+			for i := range buf {
+				if (buf[i] == 0){
+					msgbuf = buf[start, i]
+					length := i - start
+					if (length > 0){
+						var m Message
+						json.Unmarshal(msgbuf[:length], &m)
+						ch <- m
+					}
+				}
+				start = i + 1
+			}
+			
 		}
 	}
 }
@@ -207,6 +218,7 @@ func initiateConnection(msg Message, msgchan chan<- Message, addchan chan<- Clie
 		nickname: dest,
 		ch:       make(chan string),
 	}
+	msgdata = append(msgdata, 0)
 	fmt.Println(msgdata)
 	c.Write(msgdata)
 			//io.WriteString(c, fmt.Sprintf("%s,%s", localname, text))
@@ -250,7 +262,9 @@ func sendHeartBeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- 
 	for {
 		time.Sleep(2000 * time.Millisecond)
 		hb_data,_ := json.Marshal(hb_lb)
+		hb_data = append(hb_data, 0)
 		hb_data_replica,_ := json.Marshal(hb_lb_replica)
+		hb_data_replica = append(hb_data_replica, 0)
 		//if (count < 15) {
 			lb_conn.Write(hb_data)
 		//}
@@ -307,6 +321,7 @@ func sendACK(lb string, fileName string, fsize string, request bool){
 		log.Printf("sent ACKRQ for file " + fileName)
 		msg := Message{localname, lb, "ACKRQ", fileName + "," + fsize}
 		data,_ := json.Marshal(msg)
+		data = append(data, 0)
 		lb_c.Write(data)
 		waitlist[fileName] = false
 
@@ -315,6 +330,7 @@ func sendACK(lb string, fileName string, fsize string, request bool){
 		log.Printf("sent ACK for file " + fileName)
 		msg := Message{localname, lb, "ACK", fileName + "," + fsize}
 		data,_ := json.Marshal(msg)
+		data = append(data, 0)
 		lb_c.Write(data)
 		waitlist[fileName] = false
 	}
