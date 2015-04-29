@@ -163,9 +163,9 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 		}
 	}
 	log.Printf(sender)
-	client, ok := connections[sender]
-	if (!ok){
-		client = Client{
+	//client, ok := connections[sender]
+	//if (!ok){
+		client := Client{
 			conn:     c,
 			nickname: sender,
 			ch:       make(chan string),
@@ -192,7 +192,7 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 		// I/O
 		go client.ReadLinesInto(msgchan)
 		client.WriteLinesFrom(client.ch)
-	}
+	//}
 }
 
 func handleMessages(msgchan <-chan Message, addchan <-chan Client, rmchan <-chan Client) {
@@ -243,7 +243,7 @@ func initiateConnection(m Message, msgchan chan<- Message, addchan chan<- Client
 func check_heartbeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- Client){
 	for {
 		//check heart beat every 10 seconds
-		time.Sleep(10000 * time.Millisecond)
+		time.Sleep(5000 * time.Millisecond)
 		log.Printf(strconv.Itoa(len(heartbeats)))
 		for k, _ := range heartbeats {
 			if (heartbeats[k] > 0){
@@ -339,7 +339,7 @@ func MoveData(client string){
 	files := sqlite.QueryNodes(cfg.Profile[client].Addr)
 	file := strings.Split(files, "#")
 	//fmt.Println(len(file))
-
+	sqlite.DeleteNode(cfg.Profile[client].Addr)
 	for i := range file {
 		f := file[i]
 		nodes := sqlite.QueryFiles(f)
@@ -348,11 +348,11 @@ func MoveData(client string){
 			log.Printf(nodes)
 			for j := range node {
 				n := node[j]
-				if (n != client){
+				if (n != cfg.Profile[client].Addr){
 					log.Printf(f)
 					log.Printf(n)
-					sqlite.UpdateFiles(f, cfg.Profile[n].Addr, -1)
-					replica_node := sqlite.DecideUploadReplica(cfg.Profile[localname].Addr)
+					sqlite.UpdateFiles(f, n, -1)
+					replica_node := sqlite.DecideUploadReplica(n)
 					m := Message{localname, n, "CP", f + "," + replica_node}
 					data,_ := json.Marshal(m)
 					connections[n].conn.Write(data)
@@ -360,8 +360,6 @@ func MoveData(client string){
 			}
 		}
 	}
-	sqlite.DeleteNode(client)
-	Replicate()
 }
 
 func Replicate(){
@@ -443,7 +441,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	fmt.Fprintf(w, "%v", handler.Header)
-	f, err := os.OpenFile("./ds/front/db/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile("/home/ubuntu/ds/front/db/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
 		return

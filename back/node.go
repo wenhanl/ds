@@ -248,7 +248,7 @@ func sendHeartBeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- 
 	
 	//count := 0
 	for {
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 		hb_data,_ := json.Marshal(hb_lb)
 		hb_data_replica,_ := json.Marshal(hb_lb_replica)
 		//if (count < 15) {
