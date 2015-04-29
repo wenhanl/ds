@@ -49,6 +49,8 @@ var localname string
 var port string
 var lb_replica string
 var status bool
+var update bool
+
 
 func main() {
 	resp, _ := http.Get("https://s3.amazonaws.com/ds18842/chat.gcfg")
@@ -61,6 +63,7 @@ func main() {
 	localname = "loadbalancer2"
 	lb_replica = "loadbalancer1"
 	status = false
+	update = false
 	port = ":5000"
 	clients = make(map[net.Conn]chan<- string)
 	connections = make(map[string]Client)
@@ -91,6 +94,8 @@ func main() {
 	go http.ListenAndServe(":8080", nil)
 	//http.HandleFunc("/download/", download_handler)
 	//http.HandleFunc("/upload/", upload_handler)
+	http.Get(fmt.Sprintf("http://%s:8080/download/", cfg.Profile[lb_replica].Addr))
+	//defer r.Body.Close()
 
 	for {
 		conn, err := ln.Accept()
@@ -151,6 +156,14 @@ func (c Client) WriteLinesFrom(ch <-chan string) {
 }
 
 func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client, rmchan chan<- Client) {
+	/*if (update == false) {
+		m := Message{localname, lb_replica, "UPDATE", ""}
+		data,_ := json.Marshal(m)
+		data = append(data, 0)
+		initiateConnection(m, msgchan, addchan, rmchan)
+		//connections[lb_replica].conn.Write(data)
+		update = true
+	}*/
 	buf := make([]byte, 1024)
 	bytesRead,_ := c.Read(buf)
 	//log.Printf(strconv.Itoa(bytesRead))
@@ -166,6 +179,7 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 				client_conn := connections[i].conn
 				msg := Message{localname, i, "ON", lb_replica}
 				data,_ := json.Marshal(msg)
+				data = append(data, 0)
 				client_conn.Write(data)
 			}
 			Replicate()
@@ -237,7 +251,7 @@ func initiateConnection(m Message, msgchan chan<- Message, addchan chan<- Client
 			nickname: lb_replica,
 			ch:       make(chan string),
 		}
-
+		msgdata = append(msgdata,0)
 		c.Write(msgdata)
 		//io.WriteString(lb_replica, fmt.Sprintf("%s,%s", localname, text))
 			
@@ -284,6 +298,7 @@ func parseMessage(msg Message){
 				log.Printf("receieve heartbeat again, keep the node")
 				m := Message{localname, lb_replica, "KEEP", src}
 				data,_ := json.Marshal(m)
+				data = append(data, 0)
 				connections[lb_replica].conn.Write(data)
 				//io.WriteString(lb_replica, fmt.Sprintf("%s,KEEP:%s", localname, src))
 			}
@@ -299,6 +314,7 @@ func parseMessage(msg Message){
 			src := msg.Src
 			m := Message{localname, lb_replica, msg.Kind, msg.Content + "," + src}
 			data,_ := json.Marshal(m)
+			data = append(data, 0)
 			connections[lb_replica].conn.Write(data)
 			go checkACK(files[0], m, msg)
 		} else {

@@ -38,7 +38,6 @@ type Message struct {
 	Content string
 }
 
-
 var connections map[string]Client
 var clients map[net.Conn]chan<- string
 //var ACKs map[string][2]string
@@ -47,6 +46,7 @@ var cfg Config
 var localname string
 var port string
 var lb_replica string
+var timeout map[string]bool
 
 func main() {
 	resp, _ := http.Get("https://s3.amazonaws.com/ds18842/chat.gcfg")
@@ -65,8 +65,10 @@ func main() {
 	connections = make(map[string]Client)
 	//ACKs = make(map[string][2]string)
 	heartbeats = make(map[string]int)
+	timeout = make(map[string]bool)
 
 	http.HandleFunc("/upload/", upload)
+	http.HandleFunc("/download/", download)
 	go http.ListenAndServe(":8080", nil)
 
 	ln, err := net.Listen("tcp", port)
@@ -301,11 +303,7 @@ func parseMessage(msg Message){
 		src := msg.Src
 		content := msg.Content
 		files := strings.Split(content, ",")
-		//node, ok := ACKs[files[0]]
 		size,_ := strconv.Atoi(files[1])
-		//reply := Message{localname, src, "ACK", files[0]}
-		//reply_data,_ := json.Marshal(reply)
-		//connections[src].conn.Write(reply_data)
 		if (src == lb_replica) {
 			src = files[2]
 		}
@@ -319,6 +317,8 @@ func parseMessage(msg Message){
 		data = append(data, 0)
 		connections[src].conn.Write(data)
 
+		Replicate()
+	} else if (kind == "UPDATE"){
 		Replicate()
 	} else {
 		fmt.Println(msg)
@@ -380,16 +380,43 @@ func healthcheck(client string, msgchan chan<- Message, addchan chan<- Client, r
 	var m Message
 	m = Message{localname, lb_replica, "REQ", client}
 	cl, _ := connections[lb_replica]
-	/*if (!ok) {
-		log.Printf(m.Kind)
-		initiateConnection(m, msgchan, addchan, rmchan)
-		cl = connections[lb_replica]
-	} else {*/
 	data,_ := json.Marshal(m)
 	data = append(data, 0)
 	cl.conn.Write(data)	
-	
+	timeout[client] = false
+	go checkTimeout(m, cl.conn, client)
 	log.Printf("request to remove")
+}
+
+func checkTimeout(m Message, con net.Conn, client string){
+	data,_ := json.Marshal(m)
+	count := 0
+	for {
+		time.Sleep(5000 * time.Millisecond)
+		if (timeout[client] == true){
+			 break
+		} else {
+			con.Write(data)
+			count++
+		}
+		if (count >= 2){
+			MoveData(client)
+			break
+		}
+	}	
+}
+
+func download(w http.ResponseWriter, r *http.Request) {
+	log.Printf("!!!!!!!!!!file sent")
+	http.ServeFile(w, r, "/home/ubuntu/ds/front/db/development.sqlite3")
+	for i := range heartbeats{
+		log.Printf(i)
+		client_conn := connections[i].conn
+		msg := Message{localname, i, "REP", lb_replica}
+		data,_ := json.Marshal(msg)
+		data = append(data, 0)
+		client_conn.Write(data)
+	}
 }
 
 func upload(w http.ResponseWriter, r *http.Request) {
