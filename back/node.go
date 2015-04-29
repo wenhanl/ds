@@ -223,7 +223,7 @@ func initiateConnection(msg Message, msgchan chan<- Message, addchan chan<- Clie
 	c.Write(msgdata)
 			//io.WriteString(c, fmt.Sprintf("%s,%s", localname, text))
 	log.Printf("1")
-	addchan <-client
+	//addchan <-client
 	log.Printf("2")
 			//clients[client.conn] = client.ch
 	log.Printf("initiateConnection" + dest)
