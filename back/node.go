@@ -396,8 +396,10 @@ func download(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 	}
 	fsize := i.Size()
-	sendACK(loadbalancer, filename, strconv.FormatInt(fsize, 10), true)
-	go checkACK(filename, strconv.FormatInt(fsize, 10), true)
+	if (strings.Contains(filename, ".")){
+		sendACK(loadbalancer, filename, strconv.FormatInt(fsize, 10), true)
+		go checkACK(filename, strconv.FormatInt(fsize, 10), true)
+	}
 }
 
 func postFile(filename string, targetUrl string) error {

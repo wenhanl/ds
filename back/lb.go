@@ -173,7 +173,9 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 		connections[sender] = client
 		parseMessage(m)
 		sqlite.RegisterNodes(cfg.Profile[sender].Addr)
-		Replicate()
+		if (m.Kind == "HB"){
+			Replicate()
+		}
 		addchan <- client
 		defer func() {
 			m := Message{localname, sender, "MSG", fmt.Sprintf("User %s left the chat room.\n", client.nickname)}
