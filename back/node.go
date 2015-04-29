@@ -240,27 +240,22 @@ func sendHeartBeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- 
 	hb_lb := Message{localname, "loadbalancer1", "HB", "heartbeat"}
 	hb_lb_replica := Message{localname, "loadbalancer2", "HB", "heartbeat"}
 
-	lb, ok := connections["loadbalancer1"]
-	if (!ok){
-		initiateConnection(hb_lb, msgchan, addchan, rmchan)
-		lb = connections["loadbalancer1"]
-	}
-
-	if (lb_conn == nil){
-		lb_conn = lb.conn
-	}
-	
-	lb_replica, ok := connections["loadbalancer2"]
-	if (!ok){
-		log.Printf("create connection")
-		initiateConnection(hb_lb_replica, msgchan, addchan, rmchan)
-		lb_replica = connections["loadbalancer2"]
-	}
-
-	
-	//count := 0
 	for {
 		time.Sleep(2000 * time.Millisecond)
+		initiateConnection(hb_lb, msgchan, addchan, rmchan)
+		lb = connections["loadbalancer1"]
+
+		if (lb_conn == nil){
+			lb_conn = lb.conn
+		}
+		
+		initiateConnection(hb_lb_replica, msgchan, addchan, rmchan)
+		lb_replica = connections["loadbalancer2"]
+
+		
+	//count := 0
+
+
 		hb_data,_ := json.Marshal(hb_lb)
 		hb_data = append(hb_data, 0)
 		hb_data_replica,_ := json.Marshal(hb_lb_replica)
