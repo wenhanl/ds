@@ -127,7 +127,7 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 			start := 0
 			for i := range buf {
 				if (buf[i] == 0){
-					msgbuf = buf[start:i]
+					msgbuf := buf[start:i]
 					length := i - start
 					if (length > 0){
 						var m Message
