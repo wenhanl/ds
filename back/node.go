@@ -254,7 +254,7 @@ func sendHeartBeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- 
 	for {
 		time.Sleep(2000 * time.Millisecond)
 		initiateConnection(hb_lb_replica, msgchan, addchan, rmchan)
-		lb_replica = connections["loadbalancer2"]
+		lb_replica := connections["loadbalancer2"]
 		hb_data,_ := json.Marshal(hb_lb)
 		hb_data = append(hb_data, 0)
 		hb_data_replica,_ := json.Marshal(hb_lb_replica)
