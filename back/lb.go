@@ -126,20 +126,20 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 			start := 0
 			for i := range buf {
 				if (buf[i] == 0){
-					msgbuf := buf[start:i]
 					length := i - start
 					if (length > 0){
+						msgbuf := buf[start:i]
 						var m Message
 						json.Unmarshal(msgbuf[:length], &m)
 						ch <- m
 					}
+					start = i + 1
 				}
-				start = i + 1
-			}
-			
+			}	
 		}
 	}
 }
+
 
 func (c Client) WriteLinesFrom(ch <-chan string) {
 	for msg := range ch {
@@ -155,7 +155,7 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 	bytesRead,_ := c.Read(buf)
 	//log.Printf(strconv.Itoa(bytesRead))
 	var m Message
-	json.Unmarshal(buf[:bytesRead], &m)
+	json.Unmarshal(buf[:(bytesRead-1)], &m)
 	//fmt.Println(buf)
 	sender := m.Src
 	log.Printf(sender)
