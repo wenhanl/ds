@@ -107,13 +107,24 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 	for {
 		buf := make([]byte, 1024)
 		bytesRead,_ := c.conn.Read(buf)
-		var m Message
-		json.Unmarshal(buf[:bytesRead], &m)
 		if (bytesRead > 0){
-			ch <- m
+			start := 0
+			for i := range buf {
+				if (buf[i] == 0){
+					length := i - start
+					if (length > 0){
+						msgbuf := buf[start:i]
+						var m Message
+						json.Unmarshal(msgbuf[:length], &m)
+						ch <- m
+					}
+					start = i + 1
+				}
+			}	
 		}
 	}
 }
+
 
 func (c Client) WriteLinesFrom(ch <-chan string) {
 	for msg := range ch {
@@ -207,11 +218,12 @@ func initiateConnection(msg Message, msgchan chan<- Message, addchan chan<- Clie
 		nickname: dest,
 		ch:       make(chan string),
 	}
+	msgdata = append(msgdata, 0)
 	fmt.Println(msgdata)
 	c.Write(msgdata)
 			//io.WriteString(c, fmt.Sprintf("%s,%s", localname, text))
 	log.Printf("1")
-	addchan <-client
+	//addchan <-client
 	log.Printf("2")
 			//clients[client.conn] = client.ch
 	log.Printf("initiateConnection" + dest)
@@ -237,20 +249,20 @@ func sendHeartBeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- 
 	if (lb_conn == nil){
 		lb_conn = lb.conn
 	}
-	
 	lb_replica, ok := connections["loadbalancer2"]
 	if (!ok){
-		log.Printf("create connection")
 		initiateConnection(hb_lb_replica, msgchan, addchan, rmchan)
 		lb_replica = connections["loadbalancer2"]
 	}
 
-	
 	//count := 0
 	for {
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
+		
 		hb_data,_ := json.Marshal(hb_lb)
+		hb_data = append(hb_data, 0)
 		hb_data_replica,_ := json.Marshal(hb_lb_replica)
+		hb_data_replica = append(hb_data_replica, 0)
 		//if (count < 15) {
 			lb_conn.Write(hb_data)
 		//}
@@ -307,6 +319,7 @@ func sendACK(lb string, fileName string, fsize string, request bool){
 		log.Printf("sent ACKRQ for file " + fileName)
 		msg := Message{localname, lb, "ACKRQ", fileName + "," + fsize}
 		data,_ := json.Marshal(msg)
+		data = append(data, 0)
 		lb_c.Write(data)
 		waitlist[fileName] = false
 
@@ -315,6 +328,7 @@ func sendACK(lb string, fileName string, fsize string, request bool){
 		log.Printf("sent ACK for file " + fileName)
 		msg := Message{localname, lb, "ACK", fileName + "," + fsize}
 		data,_ := json.Marshal(msg)
+		data = append(data, 0)
 		lb_c.Write(data)
 		waitlist[fileName] = false
 	}
@@ -380,8 +394,10 @@ func download(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 	}
 	fsize := i.Size()
-	sendACK(loadbalancer, filename, strconv.FormatInt(fsize, 10), true)
-	go checkACK(filename, strconv.FormatInt(fsize, 10), true)
+	if (strings.Contains(filename, ".")){
+		sendACK(loadbalancer, filename, strconv.FormatInt(fsize, 10), true)
+		go checkACK(filename, strconv.FormatInt(fsize, 10), true)
+	}
 }
 
 func postFile(filename string, targetUrl string) error {

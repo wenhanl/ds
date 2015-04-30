@@ -38,7 +38,6 @@ type Message struct {
 	Content string
 }
 
-
 var connections map[string]Client
 var clients map[net.Conn]chan<- string
 //var ACKs map[string][2]string
@@ -47,6 +46,7 @@ var cfg Config
 var localname string
 var port string
 var lb_replica string
+var timeout map[string]bool
 
 func main() {
 	resp, _ := http.Get("https://s3.amazonaws.com/ds18842/chat.gcfg")
@@ -65,8 +65,10 @@ func main() {
 	connections = make(map[string]Client)
 	//ACKs = make(map[string][2]string)
 	heartbeats = make(map[string]int)
+	timeout = make(map[string]bool)
 
 	http.HandleFunc("/upload/", upload)
+	http.HandleFunc("/download/", download)
 	go http.ListenAndServe(":8080", nil)
 
 	ln, err := net.Listen("tcp", port)
@@ -122,13 +124,24 @@ func (c Client) ReadLinesInto(ch chan<- Message) {
 	for {
 		buf := make([]byte, 1024)
 		bytesRead,_ := c.conn.Read(buf)
-		var m Message
-		json.Unmarshal(buf[:bytesRead], &m)
 		if (bytesRead > 0){
-			ch <- m
+			start := 0
+			for i := range buf {
+				if (buf[i] == 0){
+					length := i - start
+					if (length > 0){
+						msgbuf := buf[start:i]
+						var m Message
+						json.Unmarshal(msgbuf[:length], &m)
+						ch <- m
+					}
+					start = i + 1
+				}
+			}	
 		}
 	}
 }
+
 
 func (c Client) WriteLinesFrom(ch <-chan string) {
 	for msg := range ch {
@@ -144,13 +157,13 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 	bytesRead,_ := c.Read(buf)
 	//log.Printf(strconv.Itoa(bytesRead))
 	var m Message
-	json.Unmarshal(buf[:bytesRead], &m)
+	json.Unmarshal(buf[:(bytesRead-1)], &m)
 	//fmt.Println(buf)
 	sender := m.Src
 	log.Printf(sender)
-	client, ok := connections[sender]
-	if (!ok){
-		client = Client{
+	//client, ok := connections[sender]
+	//if (!ok){
+		client := Client{
 			conn:     c,
 			nickname: sender,
 			ch:       make(chan string),
@@ -162,7 +175,9 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 		connections[sender] = client
 		parseMessage(m)
 		sqlite.RegisterNodes(cfg.Profile[sender].Addr)
-		Replicate()
+		if (m.Kind == "HB"){
+			Replicate()
+		}
 		addchan <- client
 		defer func() {
 			m := Message{localname, sender, "MSG", fmt.Sprintf("User %s left the chat room.\n", client.nickname)}
@@ -173,7 +188,7 @@ func handleConnection(c net.Conn, msgchan chan<- Message, addchan chan<- Client,
 
 		go client.ReadLinesInto(msgchan)
 		client.WriteLinesFrom(client.ch)
-	}
+	//}
 }
 
 func handleMessages(msgchan <-chan Message, addchan <-chan Client, rmchan <-chan Client) {
@@ -208,7 +223,7 @@ func initiateConnection(m Message, msgchan chan<- Message, addchan chan<- Client
 			nickname: lb_replica,
 			ch:       make(chan string),
 		}
-
+		msgdata = append(msgdata, 0)
 		c.Write(msgdata)
 		//io.WriteString(lb_replica, fmt.Sprintf("%s,%s", localname, text))
 			
@@ -224,7 +239,7 @@ func initiateConnection(m Message, msgchan chan<- Message, addchan chan<- Client
 func check_heartbeat(msgchan chan<- Message, addchan chan<- Client, rmchan chan<- Client){
 	for {
 		//check heart beat every 10 seconds
-		time.Sleep(10000 * time.Millisecond)
+		time.Sleep(5000 * time.Millisecond)
 		log.Printf(strconv.Itoa(len(heartbeats)))
 		for k, _ := range heartbeats {
 			if (heartbeats[k] > 0){
@@ -250,6 +265,7 @@ func parseMessage(msg Message){
 				log.Printf("receieve heartbeat again, keep the node")
 				m := Message{localname, lb_replica, "KEEP", src}
 				data,_ := json.Marshal(m)
+				data = append(data, 0)
 				connections[lb_replica].conn.Write(data)
 			}
 			heartbeats[src] = node + 1
@@ -268,6 +284,7 @@ func parseMessage(msg Message){
 		}
 		reply := Message{localname, src, "ACK", files[0]}
 		reply_data,_ := json.Marshal(reply)
+		reply_data = append(reply_data, 0)
 		connections[src].conn.Write(reply_data)
 
 		sqlite.UpdateNodes(files[0], cfg.Profile[src].Addr, size)
@@ -286,11 +303,7 @@ func parseMessage(msg Message){
 		src := msg.Src
 		content := msg.Content
 		files := strings.Split(content, ",")
-		//node, ok := ACKs[files[0]]
 		size,_ := strconv.Atoi(files[1])
-		//reply := Message{localname, src, "ACK", files[0]}
-		//reply_data,_ := json.Marshal(reply)
-		//connections[src].conn.Write(reply_data)
 		if (src == lb_replica) {
 			src = files[2]
 		}
@@ -301,8 +314,11 @@ func parseMessage(msg Message){
 		log.Printf("send copy to " + replica_node)
 		m := Message{localname, src, "ACKCP", files[0] + "," + replica_node}
 		data,_ := json.Marshal(m)
+		data = append(data, 0)
 		connections[src].conn.Write(data)
 
+		Replicate()
+	} else if (kind == "UPDATE"){
 		Replicate()
 	} else {
 		fmt.Println(msg)
@@ -319,8 +335,9 @@ func MoveData(client string){
 	log.Printf("movedata")
 	files := sqlite.QueryNodes(cfg.Profile[client].Addr)
 	file := strings.Split(files, "#")
-	//fmt.Println(len(file))
-
+	log.Printf("files" + files)
+	sqlite.DeleteNode(cfg.Profile[client].Addr)
+	log.Printf(cfg.Profile[client].Addr)
 	for i := range file {
 		f := file[i]
 		nodes := sqlite.QueryFiles(f)
@@ -329,19 +346,28 @@ func MoveData(client string){
 			log.Printf(nodes)
 			for j := range node {
 				n := node[j]
-				if (n != client){
+				log.Printf(cfg.Profile[client].Addr)
+				if (n != cfg.Profile[client].Addr){
 					log.Printf(f)
 					log.Printf(n)
-					sqlite.UpdateFiles(f, cfg.Profile[n].Addr, -1)
-					replica_node := sqlite.DecideUploadReplica(cfg.Profile[localname].Addr)
-					m := Message{localname, n, "CP", f + "," + replica_node}
+					sqlite.UpdateFiles(f, n, -1)
+					replica_addr := sqlite.DecideUploadReplica(n)
+					var copy_node string
+					for k := range cfg.Profile {
+						if (cfg.Profile[k].Addr == n){
+							log.Printf(k)
+							copy_node = k
+						}
+					}
+					m := Message{localname, copy_node, "CP", f + "," + replica_addr}
 					data,_ := json.Marshal(m)
-					connections[n].conn.Write(data)
+					data = append(data, 0)
+					fmt.Println(len(cfg.Profile))
+					connections[copy_node].conn.Write(data)
 				}
 			}
 		}
 	}
-	sqlite.DeleteNode(client)
 	Replicate()
 }
 
@@ -354,15 +380,43 @@ func healthcheck(client string, msgchan chan<- Message, addchan chan<- Client, r
 	var m Message
 	m = Message{localname, lb_replica, "REQ", client}
 	cl, _ := connections[lb_replica]
-	/*if (!ok) {
-		log.Printf(m.Kind)
-		initiateConnection(m, msgchan, addchan, rmchan)
-		cl = connections[lb_replica]
-	} else {*/
 	data,_ := json.Marshal(m)
+	data = append(data, 0)
 	cl.conn.Write(data)	
-	
+	timeout[client] = false
+	go checkTimeout(m, cl.conn, client)
 	log.Printf("request to remove")
+}
+
+func checkTimeout(m Message, con net.Conn, client string){
+	data,_ := json.Marshal(m)
+	count := 0
+	for {
+		time.Sleep(5000 * time.Millisecond)
+		if (timeout[client] == true){
+			 break
+		} else {
+			con.Write(data)
+			count++
+		}
+		if (count >= 2){
+			MoveData(client)
+			break
+		}
+	}	
+}
+
+func download(w http.ResponseWriter, r *http.Request) {
+	log.Printf("!!!!!!!!!!file sent")
+	http.ServeFile(w, r, "/home/ubuntu/ds/front/db/development.sqlite3")
+	for i := range heartbeats{
+		log.Printf(i)
+		client_conn := connections[i].conn
+		msg := Message{localname, i, "REP", lb_replica}
+		data,_ := json.Marshal(msg)
+		data = append(data, 0)
+		client_conn.Write(data)
+	}
 }
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -377,7 +431,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	fmt.Fprintf(w, "%v", handler.Header)
-	f, err := os.OpenFile("./ds/front/db/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile("/home/ubuntu/ds/front/db/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println(err)
 		return
