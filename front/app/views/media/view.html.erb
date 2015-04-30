@@ -21,10 +21,11 @@
         <li>
           <% if !filename.downcase.end_with? "mp4" %>
               <img src="http://<%= currentFrom %>/files/<%= filename %>" alt="" width="100%"/>
-              <%= urls[randIndex] %>
+              <b>Data Host: </b><%= urls[randIndex] %>
           <% else %>
               <%= videojs_rails sources: { mp4: "http://" + currentFrom + "/files/" + filename}, setup: "{}", poster: "/video_poster.jpg", controls: false, width:"100%", height:"220" %>
-              <%= urls[randIndex] %>
+              <b>Data Host: </b><%= urls[randIndex] %><br>
+              <b>File name: </b><%= filename %>
           <% end %>
         </li>
 
