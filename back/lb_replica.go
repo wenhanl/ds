@@ -367,8 +367,9 @@ func MoveData(client string){
 	log.Printf("movedata")
 	files := sqlite.QueryNodes(cfg.Profile[client].Addr)
 	file := strings.Split(files, "#")
-	//fmt.Println(len(file))
+	log.Printf("files" + files)
 	sqlite.DeleteNode(cfg.Profile[client].Addr)
+	log.Printf(cfg.Profile[client].Addr)
 	for i := range file {
 		f := file[i]
 		nodes := sqlite.QueryFiles(f)
@@ -377,19 +378,29 @@ func MoveData(client string){
 			log.Printf(nodes)
 			for j := range node {
 				n := node[j]
+				log.Printf(cfg.Profile[client].Addr)
 				if (n != cfg.Profile[client].Addr){
 					log.Printf(f)
 					log.Printf(n)
 					sqlite.UpdateFiles(f, n, -1)
-					replica_node := sqlite.DecideUploadReplica(n)
-					m := Message{localname, n, "CP", f + "," + replica_node}
+					replica_addr := sqlite.DecideUploadReplica(n)
+					var copy_node string
+					for k := range cfg.Profile {
+						if (cfg.Profile[k].Addr == n){
+							log.Printf(k)
+							copy_node = k
+						}
+					}
+					m := Message{localname, copy_node, "CP", f + "," + replica_addr}
 					data,_ := json.Marshal(m)
 					data = append(data, 0)
-					connections[n].conn.Write(data)
+					fmt.Println(len(cfg.Profile))
+					connections[copy_node].conn.Write(data)
 				}
 			}
 		}
 	}
+	Replicate()
 }
 
 func Replicate(){
