@@ -407,8 +407,8 @@ func checkTimeout(m Message, con net.Conn, client string){
 }
 
 func download(w http.ResponseWriter, r *http.Request) {
+	Replicate()
 	log.Printf("!!!!!!!!!!file sent")
-	http.ServeFile(w, r, "/home/ubuntu/ds/front/db/development.sqlite3")
 	for i := range heartbeats{
 		log.Printf(i)
 		client_conn := connections[i].conn
